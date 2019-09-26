@@ -1,0 +1,44 @@
+<%@page import="com.ipartek.formacion.controller.IndexController"%>
+<%@include file="includes/header.jsp"%>
+<%@include file="includes/navbar.jsp"%>
+
+<p class="h1 text-danger"><fmt:message key="menu.inicio" /></p>
+
+<%@include file="includes/mensaje.jsp"%>
+
+<div class="btn-group mr-2" role="group">
+	<c:if test="${sessionScope.usuario != null}">
+		<a href="videos?op=<%=VideoController.OP_NUEVO%>" class="mb-3 btn btn-outline-primary">Nuevo Video</a>
+	</c:if>
+	<c:if test="${sessionScope.usuario == null}">
+		<a href="login.jsp" class="mb-3 btn btn-outline-primary">Nuevo Video </a>
+	</c:if>
+</div>
+<div class="btn-group mr-2 mb-3 float-right" role="group">
+	<form class="form-inline my-2 my-lg-0" action="index">
+      <input class="form-control mr-sm-2" type="search" name="nombreBuscar" placeholder="Buscar por Nombre" required>
+      <input type="hidden" name="op" value="<%=IndexController.OP_BUSCAR%>">
+      <button class="btn btn-outline-success my-2 my-sm-0" type="submit"> <i class="fas fa-search"></i></button>
+    </form>
+</div>
+	
+<h3>Videos Publicados</h3>
+
+
+<ul class="list-group">
+	 <c:forEach items="${videosVisibles}" var="v" >	  
+  			<li class="list-group-item">
+				<a href="index?op=<%=IndexController.OP_DETALLE%>&id=${v.id}">
+				  	<img class="float-left mr-3 w-25" src="https://img.youtube.com/vi/${v.codigo}/default.jpg" alt="Imagen destacda del video ${v.nombre}"/>
+				  	<p class="h3">${v.nombre}</p>
+				</a>	
+				<p><i class="fas fa-user mr-1"></i> ${v.usuario.nombre}</p>				  			
+				<p><i class="fas fa-tag mr-1"></i> ${v.categoria.nombre}</p>
+				<p><i class="fas fa-heart"></i> ${v.countLikes}</p>						  		
+			</li>					
+	</c:forEach>
+</ul>		
+		
+
+
+<%@include file="includes/footer.jsp"%>

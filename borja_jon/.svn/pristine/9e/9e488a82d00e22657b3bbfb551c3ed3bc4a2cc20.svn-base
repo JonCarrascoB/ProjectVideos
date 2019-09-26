@@ -1,0 +1,91 @@
+package com.ipartek.formacion.model.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+
+import com.ipartek.formacion.model.ConnectionManager;
+import com.ipartek.formacion.model.pojo.Like;
+import com.ipartek.formacion.model.pojo.Usuario;
+import com.ipartek.formacion.model.pojo.Video;
+
+public class LikeDAO {
+
+	private static LikeDAO INSTANCE = null;
+
+	private static final String SQL_GET_ALL = "SELECT usuario_id, video_id, fecha FROM likes ORDER BY fecha DESC LIMIT 500;";
+	private static final String SQL_GET_COUNT_ALL = "SELECT COUNT(*) as total FROM likes WHERE video_id = ?;";
+
+	private LikeDAO() {
+		super();
+	}
+
+	public static synchronized LikeDAO getInstance() {
+
+		if (INSTANCE == null) {
+			INSTANCE = new LikeDAO();
+		}
+
+		return INSTANCE;
+
+	}
+
+	
+
+	public ArrayList<Like> getAll() {
+
+		ArrayList<Like> lista = new ArrayList<Like>();
+
+		try (Connection con = ConnectionManager.getConnection();
+				PreparedStatement pst = con.prepareStatement(SQL_GET_ALL);
+				ResultSet rs = pst.executeQuery()) {
+
+			while (rs.next()) {				
+				lista.add(mapper(rs));
+			}
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+
+		return lista;
+	}
+	
+	public int getCountLikes (int id) {
+		int resul = 0;
+		try (Connection con = ConnectionManager.getConnection(); PreparedStatement pst = con.prepareStatement(SQL_GET_COUNT_ALL)) {
+
+			// sustituyo la 1º ? por la variable id
+			pst.setInt(1, id);
+
+			try (ResultSet rs = pst.executeQuery()) {
+				if (rs.next()) {
+					resul = rs.getInt("total");
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return resul;
+	}
+
+	
+	private Like mapper(ResultSet rs) throws SQLException {
+		Like l = new Like();
+		l.setFecha(rs.getDate("fecha"));
+		
+		Usuario u = new Usuario();
+		u.setId(rs.getInt("usuario_id"));
+		
+		Video v = new Video ();
+		v.setId(rs.getInt("video_id"));
+		
+		l.setUsuario(u);
+		l.setVideo(v);
+		
+		return l;
+	}
+
+}

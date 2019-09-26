@@ -1,0 +1,107 @@
+package com.ipartek.formacion.controller.filter;
+
+import java.io.IOException;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.annotation.WebFilter;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import com.ipartek.formacion.controller.pojo.Alert;
+import com.ipartek.formacion.model.pojo.Rol;
+import com.ipartek.formacion.model.pojo.Usuario;
+
+/**
+ * Servlet Filter implementation class FilterSeguridad
+ */
+@WebFilter(dispatcherTypes = { DispatcherType.REQUEST, DispatcherType.FORWARD, DispatcherType.INCLUDE,
+		DispatcherType.ERROR }, urlPatterns = { "/backoffice/*", "/frontoffice/*" })
+
+public class FilterSeguridad implements Filter {
+
+	private static final String URL_BACKOFFICE = "backoffice";
+	private static final String URL_FRONTOFFICE = "frontoffice";
+	int  intentos = 0;
+	/**
+	 * @see Filter#destroy()
+	 */
+	public void destroy() {
+
+	}
+
+	/**
+	 * @see Filter#doFilter(ServletRequest, ServletResponse, FilterChain)
+	 */
+	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+		
+		
+		HttpServletRequest req = (HttpServletRequest)request;
+		HttpServletResponse res = (HttpServletResponse)response;
+		
+		
+		
+		HttpSession session = req.getSession();
+		
+		session.setAttribute("callback", req.getRequestURI()  );
+		String[] splitruta =  req.getRequestURI().split("/");
+		String ruta = splitruta[2].toLowerCase();
+		
+		if ( session.getAttribute("usuario") != null ) {
+			intentos=1;
+			Usuario usuario = (Usuario) session.getAttribute("usuario");
+			if(URL_BACKOFFICE.contentEquals(ruta)){
+				
+				if(usuario.getRol().getId()== Rol.ROL_ADMINISTRADOR) {
+					chain.doFilter(request, response);
+				}else {
+					//response redireccionar a login
+					session.removeAttribute("usuario");
+					session.setAttribute("mensaje", new Alert("danger", "Acceso solo para usuarios, has sido redirigido al apartado para administradores"));
+					res.sendRedirect( req.getContextPath() + "/backoffice/login.jsp");
+				}
+			}else if(URL_FRONTOFFICE.equals(ruta)) {
+				if(usuario.getRol().getId()== Rol.ROL_USUARIO) {
+					chain.doFilter(request, response);
+				}else {
+					session.removeAttribute("usuario");
+					session.setAttribute("mensaje", new Alert("danger", "Acceso solo para admin, has sido redirigido al apartado para usuarios"));
+					res.sendRedirect( req.getContextPath() + "/frontoffice/login.jsp");
+		
+				}
+			}
+			
+		}else {
+			//response redireccionar a login
+			if(URL_FRONTOFFICE.equals(ruta) && intentos==0 || URL_BACKOFFICE.contentEquals(ruta) && intentos == 0 ){
+				res.sendRedirect( req.getContextPath() + "/login.jsp");
+				
+			}else if(URL_BACKOFFICE.contentEquals(ruta) && intentos >0){
+				session.setAttribute("mensaje", new Alert("danger", "Acceso solo para administradores, has sido redirigido al apartado para administradores"));
+				intentos  = 0;
+				res.sendRedirect( req.getContextPath() + "/login.jsp");
+				
+			}else if(URL_FRONTOFFICE.equals(ruta) && intentos >0)  {
+				session.setAttribute("mensaje", new Alert("danger", "Zona restringida. Acceso solo para usuarios, has sido redirigido al apartado para usuarios "));
+				intentos  = 0;
+				res.sendRedirect( req.getContextPath() + "/login.jsp");
+				
+			}
+			
+		}	
+	}
+
+	/**
+	 * @see Filter#init(FilterConfig)
+	 */
+	public void init(FilterConfig fConfig) throws ServletException {
+
+	}
+
+}

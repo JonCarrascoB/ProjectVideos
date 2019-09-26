@@ -1,0 +1,10 @@
+<%@include file="../includes/header.jsp"%>
+<%@include file="../includes/navbar.jsp"%> 
+<%@include file="../includes/mensaje.jsp"%>
+
+
+Estamos en Frontoffice ${usuario}
+
+
+
+<%@include file="../includes/footer.jsp"%>
