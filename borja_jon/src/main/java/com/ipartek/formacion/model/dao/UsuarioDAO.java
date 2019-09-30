@@ -20,12 +20,14 @@ public class UsuarioDAO {
 	private static final String SQL_GET_ALL_BORRADOS = "SELECT u.id, u.nombre, r.id as 'id_rol', r.nombre as 'nombre_rol', contrasenya, fecha_creacion, fecha_eliminacion FROM usuario as u, rol as r WHERE u.id_rol = r.id AND u.fecha_eliminacion IS NOT NULL  ORDER BY id DESC LIMIT 500;";
 	private static final String SQL_GET_BY_ID = "SELECT u.id, u.nombre, r.id as 'id_rol', r.nombre as 'nombre_rol',contrasenya, fecha_creacion, fecha_eliminacion FROM usuario as u, rol as r WHERE u.id_rol = r.id AND u.id = ?;";
 	private static final String SQL_GET_ALL_BY_NOMBRE = "SELECT u.id, u.nombre, r.id as 'id_rol', r.nombre as 'nombre_rol',contrasenya, fecha_creacion, fecha_eliminacion FROM usuario as u, rol as r WHERE u.id_rol = r.id AND u.nombre LIKE ? ORDER BY u.nombre ASC LIMIT 500;";
-	private static final String SQL_EXISTE = " SELECT u.id, u.nombre, r.id as 'id_rol', r.nombre as 'nombre_rol', contrasenya, fecha_creacion, fecha_eliminacion " + " FROM usuario as u, rol as r " + " WHERE u.id_rol = r.id AND u.nombre = ? AND contrasenya = ? ;";
+	private static final String SQL_EXISTE = " SELECT u.id, u.nombre, r.id as 'id_rol', r.nombre as 'nombre_rol', contrasenya, fecha_creacion, fecha_eliminacion "
+			+ " FROM usuario as u, rol as r " + " WHERE u.id_rol = r.id AND u.nombre = ? AND contrasenya = ? ;";
 	private static final String SQL_INSERT = "INSERT INTO usuario ( nombre, contrasenya) VALUES ( ? , ?);";
 	private static final String SQL_UPDATE = "UPDATE usuario SET nombre= ?, contrasenya= ? WHERE id = ?;";
 	// private static final String SQL_DELETE = "DELETE FROM usuario WHERE id = ?;";
 	private static final String SQL_DELETE_LOGICO = "UPDATE usuario SET fecha_eliminacion = CURRENT_TIMESTAMP() WHERE id = ?;";
 	private static final String SQL_VIDEOS_LIKES = "SELECT vv.usuario_id AS id, vv.usuario_nombre AS nombre, (SELECT COUNT(vv.video_id)) AS videos_totales, (SELECT SUM(vv.gustar)) AS likes_totales FROM v_videos vv WHERE vv.usuario_id = ?;";
+
 	private UsuarioDAO() {
 		super();
 	}
@@ -52,9 +54,8 @@ public class UsuarioDAO {
 
 		Usuario usuario = null;
 
-		
-
-		try (Connection con = ConnectionManager.getConnection(); PreparedStatement pst = con.prepareStatement(SQL_EXISTE);) {
+		try (Connection con = ConnectionManager.getConnection();
+				PreparedStatement pst = con.prepareStatement(SQL_EXISTE);) {
 
 			// sustituir ? por parametros
 			pst.setString(1, nombre);
@@ -99,20 +100,21 @@ public class UsuarioDAO {
 
 		return lista;
 	}
-	
+
 	/**
 	 * Recupera de BBDD los usuarios activos o borrados.
+	 * 
 	 * @param visible = true listar activos, visible = false listar borrados;
-	 * @return lista de usuarios 
+	 * @return lista de usuarios
 	 */
 	public ArrayList<Usuario> getAllVisible(boolean visible) {
 
 		ArrayList<Usuario> lista = new ArrayList<Usuario>();
 		String sql = SQL_GET_ALL_VISIBLE;
-		if(!visible) {
-			sql= SQL_GET_ALL_BORRADOS;
+		if (!visible) {
+			sql = SQL_GET_ALL_BORRADOS;
 		}
-		
+
 		try (Connection con = ConnectionManager.getConnection();
 				PreparedStatement pst = con.prepareStatement(sql);
 				ResultSet rs = pst.executeQuery()) {
@@ -127,13 +129,10 @@ public class UsuarioDAO {
 
 		return lista;
 	}
-	
-	
-	
-	
-	
+
 	/**
 	 * Metodo para buscar usuarios por nombre.
+	 * 
 	 * @param nombre
 	 * @return
 	 */
@@ -144,6 +143,11 @@ public class UsuarioDAO {
 				PreparedStatement pst = con.prepareStatement(SQL_GET_ALL_BY_NOMBRE);) {
 
 			pst.setString(1, "%" + nombre + "%");
+
+			/*
+			 * if (orden != null && "DESC".equalsIgnoreCase(orden)) { orden = "DESC"; } else
+			 * { orden = "ASC"; } pst.setString(2, orden);
+			 */
 
 			try (ResultSet rs = pst.executeQuery()) {
 
@@ -177,8 +181,7 @@ public class UsuarioDAO {
 		}
 		return resul;
 	}
-	
-	
+
 	public boolean delete(int id) {
 		boolean resultado = false;
 
@@ -198,7 +201,6 @@ public class UsuarioDAO {
 
 		return resultado;
 	}
-	
 
 	public boolean modificar(Usuario pojo) throws Exception {
 		boolean resultado = false;
@@ -218,7 +220,6 @@ public class UsuarioDAO {
 		return resultado;
 	}
 
-	
 	public Usuario crear(Usuario pojo) throws Exception {
 
 		try (Connection con = ConnectionManager.getConnection();
@@ -242,7 +243,27 @@ public class UsuarioDAO {
 		return pojo;
 	}
 
-	
+	public Usuario migracion(Usuario pojo, Connection con) throws Exception {
+
+		try (PreparedStatement pst = con.prepareStatement(SQL_INSERT, Statement.RETURN_GENERATED_KEYS)) {
+
+			pst.setString(1, pojo.getNombre());
+			pst.setString(2, pojo.getContrasenya());
+
+			int affectedRows = pst.executeUpdate();
+			if (affectedRows == 1) {
+				// conseguimos el ID que acabamos de crear
+				ResultSet rs = pst.getGeneratedKeys();
+				if (rs.next()) {
+					pojo.setId(rs.getInt(1));
+				}
+
+			}
+
+		}
+
+		return pojo;
+	}
 
 	public Object getCountsById(int id) {
 		Usuario resul = new Usuario();
@@ -264,22 +285,20 @@ public class UsuarioDAO {
 		return resul;
 	}
 
-	
+	private Usuario mapper(ResultSet rs) throws SQLException {
 
-private Usuario mapper(ResultSet rs) throws SQLException {
-		
 		Usuario u = new Usuario();
 		u.setId(rs.getInt("id"));
 		u.setNombre(rs.getString("nombre"));
 		u.setContrasenya(rs.getString("contrasenya"));
 		u.setFechaCreacion(rs.getTimestamp("fecha_creacion"));
 		u.setFechaEliminacion(rs.getTimestamp("fecha_eliminacion"));
-		
+
 		Rol rol = new Rol();
-		rol.setId( rs.getInt("id_rol"));
-		rol.setNombre( rs.getString("nombre_rol"));
+		rol.setId(rs.getInt("id_rol"));
+		rol.setNombre(rs.getString("nombre_rol"));
 		u.setRol(rol);
-		
+
 		return u;
 	}
 
